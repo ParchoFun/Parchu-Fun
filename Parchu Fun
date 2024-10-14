@@ -1,0 +1,138 @@
+// HTML structure for the game
+const gameHTML = `
+  <div id="gameContainer">
+    <div id="homeScreen">
+      <h1>Parcho Fun</h1>
+      <button id="startGameBtn">Start Game</button>
+    </div>
+    <div id="gameScreen" style="display: none;">
+      <canvas id="gameCanvas"></canvas>
+      <div id="score">Score: 0</div>
+    </div>
+    <div id="gameOverScreen" style="display: none;">
+      <h1>Game Over</h1>
+      <p>Your Score: <span id="finalScore"></span></p>
+      <button id="restartGameBtn">Restart Game</button>
+    </div>
+  </div>
+`;
+
+// Inject the HTML into the body
+document.body.innerHTML = gameHTML;
+
+// Set up the canvas and variables
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 320;
+canvas.height = 480;
+
+let player = { x: 50, y: canvas.height - 30, width: 30, height: 30, color: 'blue', speed: 5, gravity: 1, jumpStrength: 15, velocityY: 0 };
+let platforms = [{ x: 0, y: canvas.height - 10, width: canvas.width, height: 10, color: 'green' }];
+let isJumping = false;
+let isGameRunning = false;
+let score = 0;
+let gameSpeed = 2;
+
+// Event listeners for start, restart, and controls
+document.getElementById('startGameBtn').addEventListener('click', startGame);
+document.getElementById('restartGameBtn').addEventListener('click', restartGame);
+window.addEventListener('keydown', handleKeyPress);
+window.addEventListener('keyup', handleKeyRelease);
+
+// Home screen and game flow functions
+function startGame() {
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  isGameRunning = true;
+  score = 0;
+  gameLoop();
+}
+
+function restartGame() {
+  document.getElementById('gameOverScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  isGameRunning = true;
+  score = 0;
+  player.y = canvas.height - 30;
+  player.velocityY = 0;
+  gameLoop();
+}
+
+function endGame() {
+  isGameRunning = false;
+  document.getElementById('finalScore').innerText = score;
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('gameOverScreen').style.display = 'block';
+}
+
+// Game mechanics and rendering
+function gameLoop() {
+  if (!isGameRunning) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Player logic
+  player.velocityY += player.gravity;
+  player.y += player.velocityY;
+
+  if (player.y + player.height > canvas.height) {
+    player.y = canvas.height - player.height;
+    player.velocityY = 0;
+    isJumping = false;
+  }
+
+  if (player.x + player.width > canvas.width || player.x < 0) {
+    endGame();
+    return;
+  }
+
+  // Platform logic
+  platforms.forEach(platform => {
+    platform.x -= gameSpeed;
+
+    if (platform.x + platform.width < 0) {
+      platform.x = canvas.width;
+      platform.y = Math.random() * (canvas.height - 50);
+      score++;
+    }
+
+    if (
+      player.y + player.height > platform.y &&
+      player.y < platform.y + platform.height &&
+      player.x + player.width > platform.x &&
+      player.x < platform.x + platform.width
+    ) {
+      player.velocityY = 0;
+      isJumping = false;
+    }
+
+    ctx.fillStyle = platform.color;
+    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+  });
+
+  // Draw player
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  // Draw score
+  document.getElementById('score').innerText = `Score: ${score}`;
+
+  requestAnimationFrame(gameLoop);
+}
+
+// Control handling
+function handleKeyPress(e) {
+  if (e.code === 'ArrowUp' && !isJumping) {
+    player.velocityY = -player.jumpStrength;
+    isJumping = true;
+  } else if (e.code === 'ArrowRight') {
+    player.x += player.speed;
+  } else if (e.code === 'ArrowLeft') {
+    player.x -= player.speed;
+  }
+}
+
+function handleKeyRelease(e) {
+  if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
+    player.x += 0;
+  }
+}
